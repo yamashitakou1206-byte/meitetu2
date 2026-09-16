@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="名鉄風の列車運行・時刻表Webアプリ デモ">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23c40018'/%3E%3Ctext x='50' y='67' text-anchor='middle' font-size='54' fill='white' font-family='sans-serif' font-weight='700'%3EM%3C/text%3E%3C/svg%3E">
+  <title>MEITETSU Operation Web</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <header class="topbar">
+    <button class="top-btn" id="backBtn" type="button">‹ 列車一覧</button>
+    <div class="brand"><span class="brand-mark">M</span><span>MEITETSU</span><small>運行・列車表示</small></div>
+    <div class="top-actions">
+      <button class="icon-btn" id="themeBtn" title="ダークモード">☾</button>
+      <button class="icon-btn" id="zoomOut" title="縮小">−</button>
+      <button class="icon-btn" id="zoomIn" title="拡大">＋</button>
+      <button class="icon-btn" id="menuBtn" title="メニュー">☰</button>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="control-card">
+      <div class="control-grid">
+        <label>路線
+          <select id="lineSelect"></select>
+        </label>
+        <label>駅
+          <select id="stationSelect"></select>
+        </label>
+        <label>方向
+          <select id="directionSelect">
+            <option value="up">上り・始発側</option>
+            <option value="down">下り・終着側</option>
+          </select>
+        </label>
+        <label>種別
+          <select id="typeSelect">
+            <option>普通</option><option>準急</option><option>急行</option><option>快速特急</option>
+          </select>
+        </label>
+      </div>
+      <div class="quick-row">
+        <button class="quick active" data-line="main">名古屋本線</button>
+        <button class="quick" data-line="inuyama">犬山線</button>
+        <button class="quick" data-line="tokoname">常滑線・空港線</button>
+        <button class="quick" data-line="kowa">河和線</button>
+        <button class="quick" data-line="tsushima">津島線</button>
+        <button class="quick" data-line="mikawa">三河線</button>
+        <button class="quick" data-line="nishio">西尾線</button>
+        <button class="quick" data-line="seto">瀬戸線</button>
+      </div>
+    </section>
+
+    <section class="status-banner" id="operationBanner">
+      <div class="status-dot ok"></div>
+      <div><strong id="bannerTitle">平常運転</strong><span id="bannerText">15分以上の列車の遅れはありません（デモ表示）</span></div>
+      <button id="officialBtn" type="button">公式運行情報 ↗</button>
+    </section>
+
+    <div class="dashboard">
+      <section class="main-panel">
+        <div class="train-card">
+          <div class="train-head">
+            <div class="type" id="trainType">普通</div>
+            <div class="train-service"><b id="serviceCode">M</b><span id="cars">2両</span></div>
+          </div>
+          <div class="route-row">
+            <div class="route-end"><small>発</small><strong id="origin">豊橋</strong></div>
+            <div class="route-arrow">→</div>
+            <div class="route-end"><small>着</small><strong id="destination">名鉄岐阜</strong></div>
+            <div class="train-number"><strong id="trainNo">1980S</strong><small>列車番号</small></div>
+          </div>
+          <div class="live-row">
+            <span class="live-pill"><i></i> LIVE SIM</span>
+            <span id="currentLocation">走行位置を計算中…</span>
+            <span id="nextStop">次駅 —</span>
+          </div>
+        </div>
+
+        <section class="position-card">
+          <div class="section-title"><span>列車走行位置</span><small id="positionUpdated">更新 --:--:--</small></div>
+          <div class="route-map" id="routeMap"></div>
+        </section>
+
+        <section class="schedule-card">
+          <div class="section-title"><span>停車駅・時刻</span><small>現在時刻に合わせて自動スクロール</small></div>
+          <div class="table-wrap">
+            <table id="scheduleTable">
+              <thead><tr><th>駅</th><th>到着</th><th>発車</th><th>状態</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <aside class="side-panel">
+        <section class="clock-card">
+          <div class="side-title">現在時刻</div>
+          <div class="clock-wrap"><canvas id="analog" width="190" height="190"></canvas></div>
+          <div id="digital" class="digital">00:00:00</div>
+          <div id="dateText" class="date-text">----</div>
+        </section>
+
+        <section class="next-card">
+          <div class="side-title">次の列車</div>
+          <div id="nextTrains"></div>
+        </section>
+
+        <section class="news-card">
+          <div class="section-title"><span>お知らせ</span><small id="lastUpdated">最終更新 --:--:--</small></div>
+          <div id="newsList" class="news-list"></div>
+        </section>
+
+        <section class="settings-card" id="settingsPanel">
+          <div class="side-title">表示設定</div>
+          <label class="switch-row"><span>自動更新</span><input type="checkbox" id="autoRefresh" checked><i></i></label>
+          <label class="switch-row"><span>ダークモード</span><input type="checkbox" id="darkToggle"><i></i></label>
+          <label class="switch-row"><span>秒表示</span><input type="checkbox" id="secondsToggle" checked><i></i></label>
+          <button class="wide-btn" id="refreshBtn">↻ 今すぐ更新</button>
+          <button class="wide-btn secondary" id="installBtn" hidden>＋ ホーム画面用に追加</button>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-scroll="top">⌂<span>運行</span></button>
+    <button class="nav-item" data-scroll="schedule">▤<span>時刻表</span></button>
+    <button class="nav-item" id="stationBtn">◎<span>駅を選択</span></button>
+    <button class="nav-item" id="settingsBtn">⚙<span>設定</span></button>
+  </nav>
+
+  <dialog id="menuDialog">
+    <div class="dialog-head"><strong>メニュー</strong><button id="closeDialog">×</button></div>
+    <div class="dialog-body">
+      <button class="menu-link" id="simulateDelay">⚠ 遅延表示をデモする</button>
+      <button class="menu-link" id="clearDelay">✓ 平常運転に戻す</button>
+      <button class="menu-link" id="officialMenu">↗ 名鉄公式 運行情報</button>
+      <p class="demo-note">このWeb版はGitHub Pagesで動作する静的デモです。時刻・走行位置は端末時刻を使ったシミュレーションです。</p>
+    </div>
+  </dialog>
+
+  <footer>MEITETSU Operation Web Demo · Static/PWA · v2.0</footer>
+  <script src="app.js"></script>
+</body>
+</html>
